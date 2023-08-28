@@ -1,0 +1,13 @@
+data '/home/sasdemo/casuser/bagging_tables/table_with_bins' (drop=i GRP_: WOE_:);
+	set &dm_data;
+	format _all_ $10.;
+	if _n_=1 
+    then set &dm_data;
+	array varorigin{*} %dm_interval_input;
+	array varbin{*} $ GRP_:;
+	do i=1 to dim(varorigin);
+	if varorigin{i} 
+    then varorigin{i}=varbin{i};
+	varorigin{i}=put(varorigin{i}, 5.);
+	end;
+run;
