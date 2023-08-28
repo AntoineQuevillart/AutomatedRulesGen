@@ -1,0 +1,21 @@
+%let node_guid=;
+
+data _null_;
+   set &dm_predecessors end=eof;
+   if eof then call symputx('node_guid', guid);
+run;
+
+data _null_;
+   folder = dcreate(strip(symget('node_guid')), "&dmcas_workpath");
+run;
+
+libname nodelib "&dmcas_workpath.&dm_dsep.&node_guid";
+
+%dmcas_fetchDataset(&node_guid, &dmcas_workpath.&dm_dsep.&node_guid, scorecard);
+
+proc print data=nodelib.scorecard;
+run;
+
+data '/home/sasdemo/casuser/scorecard/table';
+	set nodelib.scorecard;
+run;
