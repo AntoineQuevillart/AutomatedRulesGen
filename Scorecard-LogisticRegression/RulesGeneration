@@ -1,0 +1,104 @@
+%macro combination(indata, outdata);
+/* This macro enables to extract generate different combinations of the most risky groups so they fit an IF-THEN rule statement */
+
+	proc sort data=&indata out=work.scorecard_table_sorted;
+		by _variable_ _event_rate_;
+	run; 
+	
+	data work.scorecard_table;
+		set work.scorecard_table_sorted;
+		if abs(Estimate) >= .2;
+		RuleNum=1;
+	run;
+
+	data work.removing (keep=Type Condition Expression Population Points RuleNum Item);
+		retain Type;
+		set work.scorecard_table (rename=(_variable_=Condition _label_=Expression SCORECARD_POINTS=Points _event_rate_=Population));
+		length Type $4;
+		by Condition Population;
+		if last.Condition;
+		if Expression='Neutral Score' 
+      then delete;
+		if findc(Expression, ',') > 0 and 
+		  findc(Expression, '_MISSING_') > 0
+		  then Expression = tranwrd(Expression, ', _MISSING_', '');
+		if findc(Expression, ',') > 0 and 
+		  findc(Expression, '_UNKNOWN_') > 0
+		  then Expression = tranwrd(Expression, ', _UNKNOWN_', '');
+		if findc(Expression, ',') > 0 and
+		  findc(Expression, '_MISSING_') = 0 
+		  then Expression = cats('IN (', Expression, ')');
+		if findc(Expression, ',...') > 0 
+		  then Expression = tranwrd(Expression, ',...', '');
+		Item+1;
+	run;
+	
+	data work.add_operator;
+		set work.removing;
+		length Arg $1000;
+		by RuleNum Item;
+		if first.RuleNum 
+      then Type='IF';
+		else Type='AND';
+	  Arg=cat(Type, Expression);
+		if findc(Expression, 'IN')>0 
+		  then Arg=catx(' ', Type, Condition, Expression);
+		if findc(Expression, ',')=0 and	
+		  findc(Expression, '<>=')=0
+		  then Arg=catx(' ', Type, Condition, ' = ', Expression);
+	run;
+
+	data work.items (rename=(Arg=Condition));
+		retain Arg;
+		set work.add_operator (drop=Condition Expression Type);
+		if findc(Arg, 'IF') > 0 then
+		Arg = trim(tranwrd(Arg, 'IF', ''));
+		if findc(Arg, 'AND') > 0 then
+		Arg = trim(tranwrd(Arg, 'AND', ''));
+	run;
+
+	data work.conditions (keep=Condition);
+		set work.items;
+		Condition=strip(Condition);
+	run;
+
+  proc sql noprint;
+    select count(*) into :N from work.conditions;
+  quit;
+    
+    data work.combination(keep=item_:);
+        array selection_[&N] $500;
+        array item_[&N] $500;
+        i = 1;
+        do while (i <= &N);
+            set work.conditions;
+            selection_[i] = Condition;
+            i = i + 1;
+        end;
+        
+        i = 1;
+        do while (i < 2**&N);
+            i2 = i;
+            j = 1;
+            do while (j <= &N);
+                if (mod(i2, 2) = 1) then item_[j] = selection_[j];
+                else item_[j] = '';
+                i2 = floor(i2 / 2);
+                j = j + 1;
+            end;
+            output;
+            i = i + 1;
+        end;
+    run;
+
+	data &outdata (keep=rule);
+		set work.combination;
+		length rule $2000;
+		rule = catx(' AND ', of item_:);
+	run;
+
+	proc datasets library=work kill;
+	run;	
+%mend;
+
+%combination('/home/sasdemo/casuser/scorecard/table', '/home/sasdemo/casuser/scorecard/all_rules')
