@@ -1,0 +1,109 @@
+data train_set;
+	set "/home/sasdemo/casuser/bagging_tables/table_with_bins" ;
+	where _PartInd_=1;
+run;
+
+data test_set;
+	set "/home/sasdemo/casuser/bagging_tables/table_with_bins" ;
+	where _PartInd_=2;
+run;
+ 
+%macro bagging(n=);
+ 	%do i = 1 %to &n. ;
+ 	
+    data _null_;
+     	x=  ceil(uniform(today()*&i)*1000);
+     	call symputx('seed', x);
+    run;
+
+    proc surveyselect data=train_set out=&dm_lib..bag_&&i. 
+	    seed= &seed.
+  		method=urs 
+  		samprate=1 
+  		outhits; 
+    run;
+    
+  	proc hpsplit data=&dm_lib..bag_&&i.
+   		maxbranch=5 minleafsize=50 intervalbins=10 mincatsize=10
+   		nodes=detail cvmodelfit cvmethod=random(10) maxdepth=3
+    		splitonce assignmissing=similar;
+   		prune C45;
+  		class %dm_nominal_input %dm_binary_input %dm_interval_input %dm_ordinal_input %dm_dec_target  ;
+  		model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+  		ods output HPSplit.ModelAssessment.NodeTable=&dm_lib..table_tree&&i.;
+  		code file="/home/sasdemo/casuser/bagging_tables/score_tables/bag_&i..sas";
+  	run;
+  
+  ***** RULES GENERATION *****;
+
+  	proc sort data=&dm_lib..table_tree&&i. out=&dm_lib..step1_tree&&i.;	
+  		by StringID;
+  	run;
+  	
+  	data &dm_lib..step2_tree&&i;
+  	    length Type $5 Condition $200;
+  		set &dm_lib..step1_tree&&i. (rename=(StringID=Type Path=Condition));
+  		by Type;
+  		if Condition='Root Node' then delete;
+  	  	if findc(Condition, ',') > 0 then do;
+  	    Condition = trim(tranwrd(Condition, '=', 'IN ('));
+  	    Condition = catx('', Condition, ')');
+  	    end;
+  	    if findc(Condition, 'AND') >0 then do;
+  	    Condition = trim(tranwrd(Condition, 'AND', cat('AND ', scan(Condition, 1, ' '))));
+  	    end;
+  	run;
+  	
+  	data &dm_lib..step3_tree&&i. (keep=Type Condition PFraud1 RuleID);
+  		set &dm_lib..step2_tree&&i. (rename=(Selected2=PFraud1));
+  		by Type; 
+  		retain RuleID 0;
+  		if first.Type then do;
+  			Type='IF';
+  			RuleID+1;
+  		end;
+  		else do;
+  			Type='AND';
+  		end;
+  	run;
+  	
+  	data &dm_lib..step4_tree&&i.;
+  	   do _n_ = 1 by 1 until (last.RuleID);
+  	     set &dm_lib..step3_tree&&i.;
+  	     by RuleID;
+  	   end;
+  	   fraud = PFraud1 = '*';  
+  	   do _n_ = 1 to _n_;   
+  	     set &dm_lib..step3_tree&&i.;       
+  	     if fraud then
+  	       output;
+  	   end;
+  	   drop fraud;
+  	run;
+  	
+  	data &dm_lib..rules_tables_tree_&&i. (keep=Rules);
+  	length Rules $1000.;
+  	   do until (last.RuleID);
+  	      set &dm_lib..step4_tree&&i.;
+  	      by RuleID ;
+  	      Rules=catx(' AND ',Rules,Condition);
+  	      if findc(Rules, ',...') > 0 
+    		    then Rules = tranwrd(Rules, ',...', '');
+    		  if findc(Rules, ' or Missing ') > 0
+    		    then Rules = tranwrd(Rules, ' or Missing ', '');
+    		  if findc(Rules, ',') > 0 and 
+    		    findc(Rules, ' or Unknown ')> 0
+    		    then Rules = tranwrd(Rules, ' or Unknown ', '');
+  	   end;
+  	run;
+  
+  	proc append base=&dm_lib..rules_from_bags data=&dm_lib..rules_tables_tree_&&i. force; run;
+  	
+   	%end;
+  %mend bagging;
+
+%bagging(n=300);
+
+proc freq data=&dm_lib..rules_from_bags; 
+	table Rules/out='/home/sasdemo/casuser/bagging_tables/freq_conditions_rules';
+run;
