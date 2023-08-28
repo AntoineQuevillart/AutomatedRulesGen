@@ -1,0 +1,63 @@
+%macro crossval(k);
+	%do j = 1 %to &&k;
+	
+	data rules_set&&j;
+		set casuser.rules_set&&j;
+		rule=rules;
+		i+1;
+	run;
+
+	data _null_;
+		set rules_set&&j;
+			call execute(
+				cat("data assess_rule",i,"_set",&&j,";
+						set casuser.fold",&&j,";
+						where ", rule, ";
+						i=",i,";
+						run;"));
+	run;
+ 
+	data _null_;
+		set  rules_set&&j;
+		call execute(
+			cat("proc sql;
+					create table fold_",&&j,"_assess_rule",i," as
+					select distinct(b.Rule) as Rule,
+						sum(case when fraud_ind = 0 then 1 else 0 end)/sum(fraud_ind) as FPR, ",
+						&&j," as Fold
+					from assess_rule",i,"_set",&&j," as a 
+					inner join rules_set",&&j," as b 
+					on a.i=b.i;
+				quit;"));
+	run;
+	
+	data rules_assessed_&&j;
+		set fold_&&j._assess_rule:;
+		by Rule;
+	run;
+	
+	data _null_;
+		set  rules_set&&j;
+		call execute(
+			cat("proc sql;
+					create table avg_fpr_fold",&&j," as
+					select avg(FPR) as FPR, ",&&j," as Fold
+					from rules_assessed_",&&j,";
+				quit;"));
+	run;
+	
+	proc append base='/home/sasdemo/casuser/tree_rules/avgfpr_folds' data=avg_fpr_fold&&j. force; 
+	run;
+	
+	%end;
+%mend;
+ 
+%crossval(k=10)
+
+data '/home/sasdemo/casuser/tree_rules/big_tree' (keep=Rule Fold);
+	set rules_assessed_:; 
+run;
+
+proc freq data= '/home/sasdemo/casuser/tree_rules/big_tree'; 
+	table Rule/out='/home/sasdemo/casuser/tree_rules/freq_conditions_rules';
+run;
