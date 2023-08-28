@@ -1,9 +1,4 @@
 # AutomatedRulesGen
 Automate the generation of decision rules for fraud detection using Machine Learning models capabilities
 
-In fraud detection’s context, rules refer to guidelines or conditions that are used to identify potentially fraudulent transactions. Rules can be based on various factors such as the type of transaction, the amount, the location, or the behavior of the customer. Rules can be defined by experts according to the knowledge gained through fraudulent transaction analysis. With a sample of transactions identified as fraudulent, analysts can spot similar patterns on transactions allowing the identification of several scenarios in which a payment can be characterized as a fraud attempt. Rules are easily understandable by humans since they are IF-AND-THEN conditions.
-Rules can be defined using various information related to a transaction, here we are considering a credit card transaction (online payment, physical payment with a credit card, ATM). The purpose of this report is to present 3 methods to automate the creation of new rules. We will implement algorithms such as Decision Tree, Scorecard with Logistic Regression, and an Ensemble Trees methods. We aim to create a different ruleset for each of these techniques so we can compare them, assess their advantages and drawbacks, and conclude with the approach to continue with for further implementation.
-Those 3 methods will be tested over transactions labelled as fraud or non-fraud. The dataset contains a total of 100.000 transactions from 4941 different credit cards. There is about 12% of frauds. Some aggregated and calculated features have been added to the dataset to reach about 30/40 variables. We also propose to identify each transaction by a unique key for transaction identification.
-
-
-![image](https://github.com/AntoineQuevillart/AutomatedRulesGen/assets/114365240/44ec63ae-1e80-4a9a-b3e0-455f40f7fd7d)
+Please refer to the documentation in each section.
