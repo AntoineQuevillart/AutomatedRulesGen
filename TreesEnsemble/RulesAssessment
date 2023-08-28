@@ -1,0 +1,71 @@
+**** Selection of the rules that appear at least 3 times among all the trees ****;
+
+data raw_rules (keep=Rule i);
+	set '/home/sasdemo/casuser/bagging_tables/freq_conditions_rules';
+	if Count ge 3;
+	Rule=Rules;
+	i+1;
+run;
+
+data rules;
+    length Rule $500.;
+    set raw_rules;
+	  if findc(Rule, ' or Missing ') > 0
+	    then Rule = tranwrd(Rule, ' or Missing ', '');
+	  if findc(Rule, ',') > 0 and 
+	    findc(Rule, ' or Unknown ')> 0
+	    then Rule = tranwrd(Rule, ' or Unknown ', '');
+	  Rule = substr(Rule, index(Rule, ":") + 1);
+run;
+
+data &dm_lib..test_set_bins;
+	set "/home/sasdemo/casuser/bagging_tables/table_with_bins";
+	where _PartInd_ = 2;
+run;
+
+proc sql noprint;
+	select count(*),
+			count(case when fraud_ind = 0 then 1 else 0 end),
+			sum(fraud_ind),
+			sum(case when fraud_ind=1 then tca_mod_amt else 0 end)
+			into :total_transac, :non_fraud, :fraud, :fraud_amt
+	from &dm_lib..test_set_bins;
+run;
+
+data _null_;
+	set  rules;
+	call execute(
+		cat("data chk",i,";",
+				"set &dm_lib..test_set_bins;",
+				"where ",Rule,";",
+				"i=",i,";",
+				"run;"));
+run;
+
+data _null_;
+	set rules;
+	call execute(
+		cat("proc sql;
+				create table assess_rule",i," as
+				select distinct(b.Rule) as Rule,
+					sum(fraud_ind)/&fraud as DR,
+					sum(fraud_ind) as 'Frauds Detected'n,
+					sum(case when fraud_ind=1 then tca_mod_amt else 0 end)/&fraud_amt as VDR,
+					sum(case when fraud_ind=1 then tca_mod_amt else 0 end) as 'Amount Saved'n,
+					sum(case when fraud_ind = 0 then 1 else 0 end)/sum(fraud_ind) as FPR,
+					sum(fraud_ind)/count(*) as 'Fraud Rate for Rule'n,
+					(sum(fraud_ind)/count(*))/(&fraud/&total_transac) as Lift,
+					count(*) as 'Number of Alerts'n,
+					count(*)/&total_transac as IR,
+					count(b.Rule, ' AND ') + 1 as 'Number of Conditions'n
+				from chk",i," as a
+				inner join work.rules as b
+				on a.i=b.i;
+			quit;"));
+run;
+
+data '/home/sasdemo/casuser/bagging_tables/rules_assessed';
+	set assess_rule:;
+	by Rule;
+	if 'Number of Alerts'n gt 0;
+run;
