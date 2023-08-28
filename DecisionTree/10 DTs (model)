@@ -1,0 +1,228 @@
+data fold1 fold2 fold3 fold4 fold5 fold6 fold7 fold8 fold9 fold10;
+	set &dm_data;
+	r=ranuni(998789);
+	if r<0.1 then output fold1;
+	else if r<0.2 then output fold2;
+	else if r<0.3 then output fold3;
+	else if r<0.4 then output fold4;
+	else if r<0.5 then output fold5;
+	else if r<0.6 then output fold6;
+	else if r<0.7 then output fold7;
+	else if r<0.8 then output fold8;
+	else if r<0.9 then output fold9;
+	else output fold10;
+	drop r;
+run;
+
+proc delete data=casuser.fold1 casuser.fold2 casuser.fold3 casuser.fold4 casuser.fold5 casuser.fold6 casuser.fold7 casuser.fold8 casuser.fold9 casuser.fold10;
+run;
+
+data casuser.fold1 (promote=yes);
+	set fold1;
+run;
+
+data casuser.fold2 (promote=yes);
+    set fold2;
+run;
+
+data casuser.fold3 (promote=yes);
+    set fold3;
+run;
+
+data casuser.fold4 (promote=yes);
+    set fold4;
+run;
+
+data casuser.fold5 (promote=yes);
+    set fold5;
+run;
+
+data casuser.fold6 (promote=yes);
+    set fold6;
+run;
+
+data casuser.fold7 (promote=yes);
+    set fold7;
+run;
+
+data casuser.fold8 (promote=yes);
+    set fold8;
+run;
+
+data casuser.fold9 (promote=yes);
+    set fold9;
+run;
+
+data casuser.fold10 (promote=yes);
+    set fold10;
+run;
+
+data outf1;
+	set fold2 fold3 fold4 fold5 fold6 fold7 fold8 fold9 fold10;
+run;
+
+data outf2;
+	set fold1 fold3 fold4 fold5 fold6 fold7 fold8 fold9 fold10;
+run;
+
+data outf3;
+	set fold1 fold2 fold4 fold5 fold6 fold7 fold8 fold9 fold10;
+run;
+
+data outf4;
+	set fold1 fold2 fold3 fold5 fold6 fold7 fold8 fold9 fold10;
+run;
+
+data outf5;
+	set fold1 fold2 fold3 fold4 fold6 fold7 fold8 fold9 fold10;
+run;
+
+data outf6;
+	set fold1 fold2 fold3 fold4 fold5 fold7 fold8 fold9 fold10;
+run;
+
+data outf7;
+	set fold1 fold2 fold3 fold4 fold5 fold6 fold8 fold9 fold10;
+run;
+
+data outf8;
+	set fold1 fold2 fold3 fold4 fold5 fold6 fold7 fold9 fold10;
+run;
+
+data outf9;
+	set fold1 fold2 fold3 fold4 fold5 fold6 fold7 fold8 fold10;
+run;
+
+data outf10;
+	set fold1 fold2 fold3 fold4 fold5 fold6 fold7 fold8 fold9;
+run;
+
+ods trace on;
+proc hpsplit data = outf1
+	maxbranch=10 minleafsize=10 intervalbins=20 mincatsize=10 maxdepth=8
+	assignmissing=none nodes=detail cvmodelfit cvmethod=random(10)
+	splitonce seed=88532;
+	criterion gini ;
+	prune C45;
+	class %dm_nominal_input %dm_binary_input %dm_dec_target;
+	model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+	ods output HPSplit.ModelAssessment.NodeTable='/home/sasdemo/casuser/tree_rules/rules_outf1';
+run ;
+ods trace off;
+
+ods trace on;
+proc hpsplit data = outf2
+	maxbranch=10 minleafsize=10 intervalbins=20 mincatsize=10 maxdepth=8
+	assignmissing=none nodes=detail cvmodelfit cvmethod=random(10)
+	splitonce seed=88532;
+	criterion gini ;
+	prune C45;
+	class %dm_nominal_input %dm_binary_input %dm_dec_target;
+	model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+	ods output HPSplit.ModelAssessment.NodeTable='/home/sasdemo/casuser/tree_rules/rules_outf2';
+run ;
+ods trace off;
+
+ods trace on;
+proc hpsplit data = outf3
+	maxbranch=10 minleafsize=10 intervalbins=20 mincatsize=10 maxdepth=8
+	assignmissing=none nodes=detail cvmodelfit cvmethod=random(10)
+	splitonce seed=88532;
+	criterion gini ;
+	prune C45;
+	class %dm_nominal_input %dm_binary_input %dm_dec_target;
+	model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+	ods output HPSplit.ModelAssessment.NodeTable='/home/sasdemo/casuser/tree_rules/rules_outf3';
+run ;
+ods trace off;
+
+ods trace on;
+proc hpsplit data = outf4
+	maxbranch=10 minleafsize=10 intervalbins=20 mincatsize=10 maxdepth=8
+	assignmissing=none nodes=detail cvmodelfit cvmethod=random(10)
+	splitonce seed=88532;
+	criterion gini ;
+	prune C45;
+	class %dm_nominal_input %dm_binary_input %dm_dec_target;
+	model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+	ods output HPSplit.ModelAssessment.NodeTable='/home/sasdemo/casuser/tree_rules/rules_outf4';
+run ;
+ods trace off;
+
+ods trace on;
+proc hpsplit data = outf5
+	maxbranch=10 minleafsize=10 intervalbins=20 mincatsize=10 maxdepth=8
+	assignmissing=none nodes=detail cvmodelfit cvmethod=random(10)
+	splitonce;
+	criterion gini ;
+	prune C45;
+	class %dm_nominal_input %dm_binary_input %dm_dec_target;
+	model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+	ods output HPSplit.ModelAssessment.NodeTable='/home/sasdemo/casuser/tree_rules/rules_outf5';
+run ;
+ods trace off;
+
+ods trace on;
+proc hpsplit data = outf6
+	maxbranch=10 minleafsize=10 intervalbins=20 mincatsize=10 maxdepth=8
+	assignmissing=none nodes=detail cvmodelfit cvmethod=random(10)
+	splitonce seed=88532;
+	criterion gini ;
+	prune C45;
+	class %dm_nominal_input %dm_binary_input %dm_dec_target;
+	model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+	ods output HPSplit.ModelAssessment.NodeTable='/home/sasdemo/casuser/tree_rules/rules_outf6';
+run ;
+ods trace off;
+
+ods trace on;
+proc hpsplit data = outf7
+	maxbranch=10 minleafsize=10 intervalbins=20 mincatsize=10 maxdepth=8
+	assignmissing=none nodes=detail cvmodelfit cvmethod=random(10)
+	splitonce seed=88532;
+	criterion chaid ;
+	prune C45;
+	class %dm_nominal_input %dm_binary_input %dm_dec_target;
+	model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+	ods output HPSplit.ModelAssessment.NodeTable='/home/sasdemo/casuser/tree_rules/rules_outf7';
+run ;
+ods trace off;
+
+ods trace on;
+proc hpsplit data = outf8
+	maxbranch=10 minleafsize=10 intervalbins=20 mincatsize=10 maxdepth=8
+	assignmissing=none nodes=detail cvmodelfit cvmethod=random(10)
+	splitonce seed=88532;
+	criterion gini ;
+	prune C45;
+	class %dm_nominal_input %dm_binary_input %dm_dec_target;
+	model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+	ods output HPSplit.ModelAssessment.NodeTable='/home/sasdemo/casuser/tree_rules/rules_outf8';
+run ;
+ods trace off;
+
+ods trace on;
+proc hpsplit data = outf9
+	maxbranch=10 minleafsize=10 intervalbins=20 mincatsize=10 maxdepth=8
+	assignmissing=none nodes=detail cvmodelfit cvmethod=random(10)
+	splitonce seed=88532;
+	criterion gini ;
+	prune C45;
+	class %dm_nominal_input %dm_binary_input %dm_dec_target;
+	model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+	ods output HPSplit.ModelAssessment.NodeTable='/home/sasdemo/casuser/tree_rules/rules_outf9';
+run ;
+ods trace off;
+
+ods trace on;
+proc hpsplit data = outf10
+	maxbranch=10 minleafsize=10 intervalbins=20 mincatsize=10 maxdepth=8
+	assignmissing=none nodes=detail cvmodelfit cvmethod=random(10)
+	splitonce seed=88532;
+	criterion gini ;
+	prune C45;
+	class %dm_nominal_input %dm_binary_input %dm_dec_target;
+	model %dm_dec_target (event="1") = %dm_ordinal_input %dm_interval_input %dm_binary_input %dm_nominal_input;
+	ods output HPSplit.ModelAssessment.NodeTable='/home/sasdemo/casuser/tree_rules/rules_outf10';
+run ;
+ods trace off;
