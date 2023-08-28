@@ -1,0 +1,124 @@
+data f1;
+	set '/home/sasdemo/casuser/tree_rules/rules_outf1';
+	i=1;
+run;
+
+data f2;
+	set '/home/sasdemo/casuser/tree_rules/rules_outf2';
+	i=2;
+run;
+
+data f3;
+	set '/home/sasdemo/casuser/tree_rules/rules_outf3';
+	i=3;
+run;
+
+data f4;
+	set '/home/sasdemo/casuser/tree_rules/rules_outf4';
+	i=4;
+run;
+
+data f5;
+	set '/home/sasdemo/casuser/tree_rules/rules_outf5';
+	i=5;
+run;
+
+data f6;
+	set '/home/sasdemo/casuser/tree_rules/rules_outf6';
+	i=6;
+run;
+
+data f7;
+	set '/home/sasdemo/casuser/tree_rules/rules_outf7';
+	i=7;
+run;
+
+data f8;
+	set '/home/sasdemo/casuser/tree_rules/rules_outf8';
+	i=8;
+run;
+
+data f9;
+	set '/home/sasdemo/casuser/tree_rules/rules_outf9';
+	i=9;
+run;
+
+data f10;
+	set '/home/sasdemo/casuser/tree_rules/rules_outf10';
+	i=10;
+run;
+ 
+%macro rulegen(k);
+	%do i = 1 %to &&k;
+	
+  	proc sort data=f&&i out=step1;	
+  		by StringID;
+  	run;
+  	
+  	data step2;
+  	  length Type $5 Condition $200;
+      set step1 (rename=(StringID=Type Path=Condition));
+      by Type;
+      if Condition='Root Node' then delete;
+      if findc(Condition, ',') > 0 then do;
+        Condition = trim(tranwrd(Condition, '=', 'IN ('));
+        Condition = catx('', Condition, ')');
+      end;
+      if findc(Condition, 'AND') >0 then do;
+        Condition = trim(tranwrd(Condition, 'AND', cat('AND ', scan(Condition, 1, ' '))));
+      end;
+  	run;
+  	
+  	data step3 (keep=Type Condition PFraud1 RuleID);
+  		set step2 (rename=(Selected2=PFraud1));
+  		by Type; 
+  		retain RuleID 0;
+  		if first.Type then do;
+  			Type='IF';
+  			RuleID+1;
+  		end;
+  		else do;
+  			Type='AND';
+  		end;
+  	run;
+  	
+  	data step4;
+  	  do _n_ = 1 by 1 until (last.RuleID);
+    	  set step3;
+    	  by RuleID;
+  	  end;
+  	  fraud = PFraud1 = '*';  
+  	  do _n_ = 1 to _n_;   
+  	    set step3;       
+  	    if fraud then
+  	    output;
+  	  end;
+  	  drop fraud;
+  	run;
+  	
+  	proc delete data=casuser.rules_set&&i;
+  	run;
+  	
+  	data casuser.rules_set&&i (keep=Rules promote=yes replace=yes) ;
+  	  length Rules $1000.;
+      do until (last.RuleID);
+        set step4;
+        by RuleID ;
+        Rules=catx(' AND ',Rules,Condition);
+        if findc(Rules, ',...') > 0 
+          then Rules = tranwrd(Rules, ',...', '');
+        if findc(Rules, 'or Missing') > 0
+          then Rules = tranwrd(Rules, 'or Missing', '');
+        if findc(Rules, ',') > 0 and 
+          findc(Rules, '...') > 0
+          then Rules = tranwrd(Rules, '...', '');
+        end;
+    run;
+  	
+  	proc print data=casuser.rules_set&&i;
+  	run;
+  	
+  %end;
+%mend;
+
+%rulegen(k=10)
